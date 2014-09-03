@@ -1,0 +1,163 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{mathtools}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{fullpage}
+\usepackage{longtable}
+\usepackage[hidelinks]{hyperref}
+\usepackage{etoolbox}
+\let\bbordermatrix\bordermatrix
+\patchcmd{\bbordermatrix}{8.75}{4.75}{}{}
+\patchcmd{\bbordermatrix}{\left(}{\left[}{}{}
+\patchcmd{\bbordermatrix}{\right)}{\right]}{}{}
+%\usepackage{geometry}
+\begin{document}
+\begin{flushleft}
+\begin{center}
+$
+variables = \bbordermatrix{
+~ &\textbf{Bid}& P_{H} & P_{G} & P_P & E & d &  T & P_{DL} &\cr
+~ & x0      &   x1      &x2        &   x3  &  x4  &   x5     &    x6 &x7 \cr}
+$\\[34pt]
+
+%\\[34pt]
+
+
+\begin{tabular}{l | c c |c}
+$Bid_i$ & 0       & & $x_0$ \\[6pt]
+$P_{Hs}$ & 1&s      & $x_1$ \\[6pt]
+$P_{Gs}$ & s+1  &  2s      & $x_2$ \\[6pt]
+$P_{Ps}$ & 2s+1  &    3s    & $x_3$ \\[6pt]
+$E_s$ & 3s+1  &    4s   & $x_4$ \\[6pt]
+$d_s$ & 4s+1  &  5s      & $x_5$ \\[6pt]
+$T_s$ & 5s+1  &  6s      & $x_6$ \\[6pt]
+$P_{DLs}$ & 6s+1  & 7s       & $x_7$ 
+\end{tabular}
+\end{center}
+
+\newpage
+
+\textbf{\begin{large}
+Equations:
+\end{large}}\\[14pt]
+
+%\noindent\makebox[\linewidth]{\rule{16.5cm}{0.4pt}} \\[8pt]
+\textbf{\# Eq. 0: Market Bid for period i $\Rightarrow$ $[0:s-1]$}\\[8pt]
+$\displaystyle{ Bid_i=P_{Hs,i}+P_{Gs,i}}$ \\[8pt]
+$
+Eq.\;0 = \bbordermatrix{
+~ & Bid_i & P_{Hs,i} & P_{Gs,i} & P_{Ps,i} & E_{s,i} & d_s,i & T_{s,i} & P_{DLs,i} \cr
+              ~ & 1 & -1&-1&0&0&0 & 0&0 \cr}
+$\\[6pt]
+$
+b = \bbordermatrix{~ \cr
+              ~ & 0 \cr}
+$\\[8pt]
+\noindent\makebox[\linewidth]{\rule{16.5cm}{0.4pt}} \\[8pt]
+\textbf{\# Eq. 1: Initial Reservoir Level $\Rightarrow$ $[s:2s-1]$} \\[8pt]
+
+$\hookrightarrow$ 1st hour \\[8pt]
+$\displaystyle{ E_{s,1}=past\_reservoir\_level}$ \\[8pt]
+$
+Eq.\;1 = \bbordermatrix{
+~ & Bid_i & P_{Hs,i} & P_{Gs,i} & P_{Ps,i} & E_{s,i} & d_s,i & T_{s,i} & P_{DLs,i} \cr
+              ~ &0 & 0&0&0&1&0 & 0&0 \cr}
+$\\[6pt]
+$
+b = \bbordermatrix{~ \cr
+              ~ & e\_begin \cr}
+$\\[8pt]
+
+\noindent\makebox[\linewidth]{\rule{16.5cm}{0.4pt}} \\[8pt]
+\textbf{\# Eq. 2: Reservoir level $\Rightarrow$ $[2s:3s-1]$} \\[8pt]
+$\hookrightarrow$ remaining hours \\[8pt]
+$\displaystyle{ E_{s,i}=E_{s,i-1}+t\cdot \left[\eta_{P}\cdot P_{Ps,i-1}-\frac{P_{Hs,i-1}}{\eta_{H}}\right]}$ \\[8pt]
+$
+Eq.\;2 = \bbordermatrix{
+~ & Bid_i & P_{Hs,i} & P_{Gs,i} & P_{Ps,i} & E_{s,i} & d_s,i & T_{s,i} & P_{DLs,i} \cr
+              ~ &0 & 1_{t-1}\cdot \frac{t}{\eta_H} &0&-1_{t-1}\cdot \eta_P \cdot t&-1_{t-1}&0 & 0&0 \cr}
+$\\[6pt]
+$
+b = \bbordermatrix{~ \cr
+              ~ & 0 \cr}
+$\\[8pt]
+
+\noindent\makebox[\linewidth]{\rule{16.5cm}{0.4pt}} \\[8pt]
+\textbf{\# Eq. 3: Imbalance for every scenario $\Rightarrow$ $[3s:4s-1]$} \\[8pt]
+$\displaystyle{d_{s,i}= P_{Gs,i} - P_{Ws,i} + P_{Ps,i} + P_{DL_{s,i}}}$ \\[8pt]
+$
+Eq.\;4 = \bbordermatrix{
+~ & Bid_i & P_{Hs,i} & P_{Gs,i} & P_{Ps,i} & E_{s,i} & d_s,i & T_{s,i} & P_{DLs,i} \cr
+              ~ &0 & 0 &1&1&0&1 & 0&1 \cr}
+$\\[6pt]
+$
+b = \bbordermatrix{~ \cr
+              ~ & P_{Ws,i} \cr}
+$\\[8pt]
+
+%\begin{minipage}{16.5cm}
+%\end{minipage}
+
+
+\newpage 
+
+\textbf{\begin{large}
+Inequalities:
+\end{large}}\\[14pt]
+%\noindent\makebox[\linewidth]{\rule{16.5cm}{0.4pt}} \\[8pt]
+\textbf{\# Ine. 0: Hydro Generation $\Rightarrow$ $[0:s-1]$} \\[8pt]
+$\displaystyle{P_{Hs,i} \leq \eta_{H} \cdot \left[ \frac{E_{s,i}}{t} + \eta_{P}\cdot P_{Ps,i}\right]}$ \\[8pt]
+$
+Ad.\;0 = \bbordermatrix{
+~ & Bid_i & P_{Hs,i} & P_{Gs,i} & P_{Ps,i} & E_{s,i} & d_s,i & T_{s,i} & P_{DLs,i} \cr
+~ & 0      & 1& 0& -t \cdot \eta_H \cdot \eta_P &-\frac{\eta_H}{t} &   0  &  0  &   0      \cr}
+$\\[6pt]
+$
+bd = \bbordermatrix{~ \cr
+              ~ & 0 \cr}
+$\\[8pt]
+
+\noindent\makebox[\linewidth]{\rule{16.5cm}{0.4pt}} \\[8pt]
+ 
+\textbf{\# Ine. 1: Epigraph Form (1) $\Rightarrow$ $[s:2s-1]$} \\[8pt]
+$\displaystyle{d_{s,i} \cdot (p_{i}-p_{i}^{+}) \leqslant T_{s,i}}$ \\[8pt]
+$
+Ad.\;1 = \bbordermatrix{
+~ & Bid_i & P_{Hs,i} & P_{Gs,i} & P_{Ps,i} & E_{s,i} & d_s,i & T_{s,i} & P_{DLs,i} \cr
+~ & 0      &   0      &0  &   0  &  0      &   p-p\_plus&-1   &0 \cr}
+$\\[6pt]
+$
+bd = \bbordermatrix{~ \cr
+              ~ & 0 \cr}
+$\\[8pt]
+
+\noindent\makebox[\linewidth]{\rule{16.5cm}{0.4pt}} \\[8pt]
+\textbf{\# Ine. 2: Epigraph Form (2) $\Rightarrow$ $[2s:3s-1]$} \\[8pt]
+$\displaystyle{-d_{s,i} \cdot (p_{i}^{-}-p_{i}) \leqslant T_{s,i}}$ \\[8pt]
+$
+Ad.\;2 = \bbordermatrix{
+~ & Bid_i & P_{Hs,i} & P_{Gs,i} & P_{Ps,i} & E_{s,i} & d_s,i & T_{s,i} & P_{DLs,i} \cr
+~ & 0      &   0      &0  &   0  &  0      &   p\_minus-p&-1   &0 \cr}
+$\\[6pt]
+$
+bd = \bbordermatrix{~ \cr
+              ~ & 0 \cr}
+$\\[8pt]
+
+\noindent\makebox[\linewidth]{\rule{16.5cm}{0.4pt}} \\[8pt]
+\textbf{\# Ine. 3: Hydro + Pump Constraint $\Rightarrow$ $[3s:4s-1]$} \\[8pt]
+$\displaystyle{P_{Hs,i} + P_{Ps,i} \leq P_H^M}$ \\[8pt]
+$
+Ad.\;3 = \bbordermatrix{
+~ & Bid_i & P_{Hs,i} & P_{Gs,i} & P_{Ps,i} & E_{s,i} & d_s,i & T_{s,i} & P_{DLs,i} \cr
+~ & 0      &   1      &0  &   1  &  0  &   0     &   0   &0 \cr}
+$\\[6pt]
+$
+bd = \bbordermatrix{~ \cr
+              ~ & P_H^M \cr}
+$\\[8pt]
+
+\end{flushleft}
+\end{document}
