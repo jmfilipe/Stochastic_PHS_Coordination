@@ -1,4 +1,4 @@
-function [ final_data,profit, taxas, x,fval,exitflag,output,lambda ] = operational_strat( np,d, dados, e_max, e_begin, hydro_eff, pump_eff, t, real_wind, forecast_wind,point_wind, hydro_max, pump_max, to_round,p,p_plus,p_minus)
+function [ final_data,profit, taxas, final_storage, x,fval,exitflag,output,lambda ] = operational_strat( np,d, dados, e_max, e_begin, hydro_eff, pump_eff, t, real_wind, forecast_wind,point_wind, hydro_max, pump_max, to_round,p,p_plus,p_minus)
 %operational_strat(np,d,dados,e_begin, hydro_eff, pump_eff, t, real_wind, forecast_wind,point_wind, hydro_max, pump_max, e_max);
 %% INITIALIZATION
 day_ahead=dados;
@@ -55,15 +55,15 @@ final_data=zeros(np,7);
             Aeq(0*np+j,3*np+j) = 1;
             Aeq(0*np+j,5*np+j) = 1;
             %Aeq(0*np+j,6*np+j) = -1;
-            beq(0*np+j) = day_ahead(j,1)+day_ahead(j,2);
+            beq(0*np+j) = day_ahead(j,1);
 
             %Hydro Pumped Storage
             if j == h %1st hour of operational strategy
                 if j==1 %first hour of the day
                     Aeq(1*np+j,2*np+j) = 1;
                     beq(1*np+j) = e_begin;                %initial level has to be e_begin
-                    Aeq(3*np+j,0*np+j) = 1;
-                    beq(3*np+j) = hydro_eff/t * e_begin;
+%                     Aeq(3*np+j,0*np+j) = 1;
+%                     beq(3*np+j) = hydro_eff/t * e_begin;
                    
                 else
                     Aeq(5*np+j,2*np+j) = 1;
@@ -93,16 +93,16 @@ final_data=zeros(np,7);
             
             %Eq. 5: Energy for period 24, E_24 = 0
             if j == np
-                 Aeq(6*np+j,2*np+j) = 1;
-                 Aeq(6*np+j,0*np+j) = -1/hydro_eff;
-                 Aeq(6*np+j,1*np+j) = 1*pump_eff;
+%                  Aeq(6*np+j,2*np+j) = 1;
+%                  Aeq(6*np+j,0*np+j) = -1/hydro_eff;
+%                  Aeq(6*np+j,1*np+j) = 1*pump_eff;
             end
             
             %Eq. 5: Pump for period 24, E_24 = 0
             if j == np
                  %Aeq(5*np+j,2*np+j) = 1;
                  %Aeq(5*np+j,0*np+j) = -1/hydro_eff;
-                 Aeq(7*np+j,1*np+j) = 1;
+%                  Aeq(7*np+j,1*np+j) = 1;
             end
             %==============================================================
             %INEQUAL EQ.
@@ -115,10 +115,10 @@ final_data=zeros(np,7);
 
             %ineq. 1:Imbalances p+*d-T=<0
             Ad(1*np+j,(4)*np+j) = -1;           %Ti
-            Ad(1*np+j,(5)*np+j) = 1;%p_plus(j,d);     %di
+            Ad(1*np+j,(5)*np+j) = 1;%*(p((d-1)*np+j)-p_plus((d-1)*np+j));     %di
             %ineq. 2:Imbalances p-*d-T=<0
             Ad(2*np+j,(4)*np+j) = -1;           %Ti
-            Ad(2*np+j,(5)*np+j) = -1;%p_minus(j,d);     %di
+            Ad(2*np+j,(5)*np+j) = -1;%*(p_minus((d-1)*np+j)-p((d-1)*np+j));     %di
 
             %max hydro
             Ad(3*np+j,0*np+j) = 1;
@@ -212,6 +212,6 @@ final_data=zeros(np,7);
        taxas = taxas + taxas_2;
     end
     
-    
+    final_storage=final_data(24,3)+final_data(24,2)*pump_eff-final_data(24,1)/hydro_eff;
 end
 

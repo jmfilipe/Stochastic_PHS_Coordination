@@ -2,9 +2,10 @@ function [data, data_opt,profits_opt] = scenarios_simple_U_function( nd, sd, np,
 data=[];
 data_opt=[];
 profits_opt=[];
-e_begin = 0.0*e_max;     %initial & final level (MW) 
+e_storage_initial = 0.0*e_max;     %initial & final level (MW) 
 global fval_vector
 
+%modiefiers used for the naive function
 p_plus_modiefied=p*0.87;
 p_minus_modiefied=p*1.09;
 p_modiefied=p;
@@ -30,15 +31,15 @@ for d = sd:nd   %simulates for the time horizon defined - nd: n. of days
 
     % LINEAR PROGRAM PARAMETERS
 
-    n_var = (4+5*s+1)*np;            % num. variables 
+    n_var = (1+7*s)*np;            % num. variables 
 
     % equal equations
-    neq = (5*s+3+1)*np;           %n equal equations
+    neq = (4*s+1)*np;           %n equal equations
     Aeq = sparse(neq,n_var); 
     beq = sparse(1,neq);
 
     % inequalities
-    nde = (4*s-1+1+2)*np;             %n inequal equations              
+    nde = (4*s+1)*np;             %n inequal equations              
     Ad = sparse(nde,n_var);
     bd = sparse(1,nde);
 
@@ -55,226 +56,171 @@ for d = sd:nd   %simulates for the time horizon defined - nd: n. of days
                 %EQUAL EQ.
                 %==============================================================
                 
-                %Eq. 0: Regulation costs of period i
-                    Aeq(0*np+j,(2*s+2)*np+j) = 1;         %Ti
-                for Ts_Ts=(2*s+3):(3*s+2)
-                    Aeq(0*np+j,Ts_Ts*np+j) = -1*prob;    %Ts,i
+                %Eq. 0: Market Bid for period i
+                % 
+                BID=0;
+                P_hydro=1;
+                P_grid=s+1;
+                for eq=(0):(s-1)
+                    Aeq(eq*np+j,P_hydro*np+j) = -1;     %PH
+                    Aeq(eq*np+j,P_grid*np+j) = -1;      %PG
+                    Aeq(eq*np+j,BID*np+j) = 1;          %BID
+                    P_hydro=P_hydro+1;
+                    P_grid=P_grid+1;
                 end
-                clear Ts_Ts
+                clear P_grid
+                clear P_hydro
+                clear BID
                 
-                %Eq. 1 Hydro Pumped Storage 
+                %Eq. 1 & 2 Reservoir level
+                %
                 if j == 1 %1st hour
                     
-                    %Eq. 1 Hydro Pumped Storage (1)
-                    q_q=1;
-                    for Es_Es=(s+1):(2*s)
-                        Aeq(q_q*np+j,Es_Es*np+j) = 1;
-                        beq(q_q*np+j) = e_begin;                
-                        q_q=q_q+1;
+                    %Eq. 1 Initial Reservoir Level
+                    E_storage=3*s+1;
+                    for eq=(s):(2*s-1)
+                        Aeq(eq*np+j,E_storage*np+j) = 1;
+                        beq(eq*np+j) = e_storage_initial;                
+                        E_storage=E_storage+1;
                     end
-                    clear Es_Es
-                    clear q_q
-                    
-                    %Eq. 2 Hydro Pumped Storage (2)
-                    Aeq((s+1)*np+j,0*np+j) = 1;
-                    beq((s+1)*np+j) = hydro_eff/t * e_begin;        
+                    clear E_storage
+                    clear eq
+                           
                 
-                %Eq. 3 Hydro Pumped Storage (3)
+                
                 else %remaining hours
-                    q_q=s+2;
-                    Es_Es=s+1;
-                    for Pps_Pps=1:s
-                        Aeq(q_q*np+j,0*np+j-1) = t/hydro_eff;
-                        Aeq(q_q*np+j,Pps_Pps*np+j-1) = -t*pump_eff;                    
-                        Aeq(q_q*np+j,Es_Es*np+j) = 1;
-                        Aeq(q_q*np+j,Es_Es*np+j-1 ) = -1;
-                        q_q=q_q+1;
-                        Es_Es=Es_Es+1;
+                    
+                    %Eq. 2 Storage level
+                    E_storage=3*s+1;
+                    P_hydro=1;
+                    P_pump=2*s+1;
+                    for eq=(2*s):(3*s-1)
+                        Aeq(eq*np+j,P_hydro*np+j-1) = t/hydro_eff;
+                        Aeq(eq*np+j,P_pump*np+j-1) = -t*pump_eff;                    
+                        Aeq(eq*np+j,E_storage*np+j) = 1;
+                        Aeq(eq*np+j,E_storage*np+j-1 ) = -1;
+                        E_storage=E_storage+1;
+                        P_hydro=P_hydro+1;
+                        P_pump=P_pump+1;
                     end
+                    clear P_pump
+                    clear E_storage
+                    clear eq
+                    clear P_hydro
                 end
-                clear Pps_Pps
-                clear Es_Es
-                clear q_q                
-                
-                %Eq. 4: Imbalance for every scenario 
-                q_q=2*s+2;
-                Pg_Pg=2*s+1;
-                d_d=3*s+3;
-                Psps_Psps=4*s+4;
-                for Pps_Pps=1:s
-                    Aeq(q_q*np+j,Pps_Pps*np+j) = 1;
-                    Aeq(q_q*np+j,Pg_Pg*np+j) = 1;
-                    Aeq(q_q*np+j,d_d*np+j) = 1;
-                    Aeq(q_q*np+j,Psps_Psps*np+j) = 1;
-                    beq(q_q*np+j) = pw((d-1)*np+j,Pps_Pps);
-                    d_d=d_d+1;
-                    Psps_Psps=Psps_Psps+1;
-                    q_q=q_q+1;
+                             
+                %Eq. 3: Imbalance for every scenario 
+                P_grid=s+1;
+                P_pump=2*s+1;
+                d_imbalance=4*s+1;
+                P_waste=6*s+1;
+                for eq=(3*s):(4*s-1)
+                    Aeq(eq*np+j,P_grid*np+j) = 1;
+                    Aeq(eq*np+j,P_pump*np+j) = 1;
+                    Aeq(eq*np+j,d_imbalance*np+j) = 1;
+                    Aeq(eq*np+j,P_waste*np+j) = 1;
+                    %(P_grid-s) equals from 1 to s, this way the use of another incremental variable is avoided
+                    beq(eq*np+j) = pw((d-1)*np+j,P_grid-s);
+                    P_grid=P_grid+1;
+                    P_waste=P_waste+1;
+                    d_imbalance=d_imbalance+1;
+                    P_pump=1+P_pump;
                 end
-                clear Pps_Pps
-                clear Pg_Pg
-                clear d_d
-                clear Psps_Psps
-                clear q_q
-                
-               %Eq. 5: Spill for period i
-                    Aeq((3*s+2)*np+j,(4*s+3)*np+j) = 1;         %Pspi
-                for Psps_Psps=(4*s+4):(5*s+3)
-                    Aeq((3*s+2)*np+j,Psps_Psps*np+j) = -1*prob;    %Psps,i
-                end
-                clear Psps_Psps
-                
-                %Eq. 6: Pump Power for period i
-                    Aeq((3*s+3)*np+j,(5*s+4)*np+j) = 1;         %Ppi
-                for Pps_Pps=(1):(s)
-                    Aeq((3*s+3)*np+j,Pps_Pps*np+j) = -1*prob;    %Pps,i
-                end
-                clear Pps_Pps
-                
-                %Eq. 7: Pump Power for period 24, PP_24 = 0
-                if j == np
-                    q_q=3*s+4;
-                    for Pps_Pps=1:s
-                         Aeq((q_q)*np+j,Pps_Pps*np+j) = 1;
-                         q_q=q_q+1;
-                    end
-                end
-                clear Pps_Pps
-                clear q_q
-                
-                %Eq. 8      : Energy for period 24, E_24 = 0
-                if j == np
-                    q_q=4*s+4;
-                    for E_E=s+1:2*s
-                         Aeq((q_q)*np+j,E_E*np+j) = 1;
-                         Aeq((q_q)*np+j,0*np+j) = -1/hydro_eff;
-                         q_q=q_q+1;
-                    end
-                end
-                clear E_E
-                clear q_q
-                               
+                clear P_pump
+                clear P_grid
+                clear d_imbalance
+                clear P_waste
+                clear eq
+                                              
                 %==============================================================
                 %INEQUAL EQ.
                 %==============================================================
 
                 %Ineq. 0: Hydro Generation
-                q_q=0;
-                Es_Es=s+1;
-                for Pps_Pps=1:s
-                    Ad(q_q*np+j,0*np+j) = 1;
-                    Ad(q_q*np+j,Es_Es*np+j) = -hydro_eff/t;  
-                    Ad(q_q*np+j,Pps_Pps*np+j) = -t*hydro_eff*pump_eff;
-                    q_q=q_q+1;
-                    Es_Es=Es_Es+1;
+                P_hydro=1;
+                P_pump=2*s+1;
+                E_storage=3*s+1;
+                for eq=(0):(s-1)
+                    Ad(eq*np+j,P_hydro*np+j) = 1;
+                    Ad(eq*np+j,E_storage*np+j) = -hydro_eff/t;  
+                    Ad(eq*np+j,P_pump*np+j) = -t*hydro_eff*pump_eff;
+                    P_pump=1+P_pump;
+                    P_hydro=1+P_hydro;
+                    E_storage=E_storage+1;
                 end
-                clear Pps_Pps
-                clear Es_Es
-                clear q_q
-                
-               
+                clear P_pump
+                clear E_storage
+                clear eq
+                clear P_hydro
+                              
                 %Ineq. 1: Epigraph Form (1)
-                q_q=s;
-                d_d=3*s+3;
-                for Ts_Ts=(2*s+3):(3*s+2)
-                    Ad(q_q*np+j,(Ts_Ts)*np+j) = -1;           %Ts,i
-                    Ad(q_q*np+j,(d_d)*np+j) = (p_modiefied((d-1)*np+j)-p_plus_modiefied((d-1)*np+j));     %d,si
-                    bd((q_q)*np+j)=0;
+                d_imbalance=4*s+1;
+                T_costs=5*s+1;
+                for eq=(s):(2*s-1)
+                    Ad(eq*np+j,(T_costs)*np+j) = -1;           %Ts,i
+                    Ad(eq*np+j,(d_imbalance)*np+j) = (p_modiefied((d-1)*np+j)-p_plus_modiefied((d-1)*np+j));     %d,si
+                    bd((eq)*np+j)=0;
                 
                     %Ineq. 2: Epigraph Form (2)
-                    Ad((q_q+s)*np+j,(Ts_Ts)*np+j) = -1;           %Ts,i
-                    Ad((q_q+s)*np+j,(d_d)*np+j) = -(p_minus_modiefied((d-1)*np+j)-p_modiefied((d-1)*np+j));     %d,si
-                    bd((q_q+s)*np+j)=0; 
+                    Ad((eq+s)*np+j,(T_costs)*np+j) = -1;           %Ts,i
+                    Ad((eq+s)*np+j,(d_imbalance)*np+j) = -(p_minus_modiefied((d-1)*np+j)-p_modiefied((d-1)*np+j));     %d,si
+                    bd((eq+s)*np+j)=0; 
                     
-                    d_d=d_d+1;
-                    q_q=q_q+1;
+                    d_imbalance=d_imbalance+1;
+                    T_costs=T_costs+1;
                 end
-                clear q_q
-                clear d_d
-                clear Ts_Ts
+                clear T_costs
+                clear d_imbalance
+                clear eq
                 
                 % Ineq. 3: Hydro + Pump Constraint
-                q_q=3*s;
-                for Pps_Pps=1:s
-                    Ad(q_q*np+j,0*np+j) = 1;
-                    Ad(q_q*np+j,Pps_Pps*np+j) = 1;
-                    bd(q_q*np+j) = hydro_max/e_max;
-                    q_q=q_q+1;
+                P_hydro=1;
+                P_pump=2*s+1;
+                for eq=(3*s):(4*s-1)
+                    Ad(eq*np+j,P_hydro*np+j) = 1;
+                    Ad(eq*np+j,P_pump*np+j) = 1;
+                    bd(eq*np+j) = hydro_max/e_max;
+                    P_pump=P_pump+1;
+                    P_hydro=P_hydro+1;
                 end
-                clear q_q
-                clear Pps_Pps
-                
-%                 %Ineq. 4: Wind Power Constraint
-%                 q_q=4*s;
-%                 Pg_Pg=2*s+1;
-%                 Psps_Psps=4*s+4;
-%                 for Pps_Pps=1:s
-%                     Ad(q_q*np+j,Pps_Pps*np+j) = -1;
-%                     Ad(q_q*np+j,Pg_Pg*np+j) = -1;
-%                     Ad(q_q*np+j,Psps_Psps*np+j) = -1;
-%                     bd(q_q*np+j)=-pw((d-1)*np+j,Pps_Pps);
-%                     Psps_Psps=Psps_Psps+1;
-%                     q_q=q_q+1;
-%                 end
-%                 clear Psps_Psps
-%                 clear Pg_Pg
-%                 clear q_q
-%                 clear Pps_Pps
-
+                clear P_hydro
+                clear P_pump
+                clear eq
+                              
+% %                 Ineq. 6: Objective Function Bounds (1)
 %                 
-                % Ineq. 5: Pump + Spill Constraint
-                q_q=4*s;
-                Psps_Psps=4*s+4;
-                for Pps_Pps=1:s
-                    Ad(q_q*np+j,Psps_Psps*np+j) = 1;
-                    Ad(q_q*np+j,Pps_Pps*np+j) = 1;
-                    bd(q_q*np+j) = pw((d-1)*np+j,Pps_Pps);
-                    q_q=q_q+1;
-                    Psps_Psps=Psps_Psps+1;
-                end
-                clear q_q
-                clear Pps_Pps
-                clear Psps_Psps
-                
-%                 Ineq. 6: Objective Function Bounds (1)
-                
-                Ad((5*s)*np+j,0*np+j) = p_modiefied((d-1)*np+j);
-                Ad((5*s)*np+j,(2*s+1)*np+j) = p_modiefied((d-1)*np+j);
-                Ad((5*s)*np+j,(2*s+2)*np+j) = -1;
-                bd((5*s)*np+j) = L_max/24;
-                
-%                 Ineq. 7: Objective Function Bounds (1)
-                
-                Ad((5*s+1)*np+j,0*np+j) = -p_modiefied((d-1)*np+j);
-                Ad((5*s+1)*np+j,(2*s+1)*np+j) = -p_modiefied((d-1)*np+j);
-                Ad((5*s+1)*np+j,(2*s+2)*np+j) = 1;
-                bd((5*s+1)*np+j) = -L_min/24;
-               
+%                 Ad((5*s)*np+j,0*np+j) = p_modiefied((d-1)*np+j);
+%                 Ad((5*s)*np+j,(2*s+1)*np+j) = p_modiefied((d-1)*np+j);
+%                 Ad((5*s)*np+j,(2*s+2)*np+j) = -1;
+%                 bd((5*s)*np+j) = L_max/24;
+%                 
+% %                 Ineq. 7: Objective Function Bounds (1)
+%                 
+%                 Ad((5*s+1)*np+j,0*np+j) = -p_modiefied((d-1)*np+j);
+%                 Ad((5*s+1)*np+j,(2*s+1)*np+j) = -p_modiefied((d-1)*np+j);
+%                 Ad((5*s+1)*np+j,(2*s+2)*np+j) = 1;
+%                 bd((5*s+1)*np+j) = -L_min/24;
+%                
                 %==============================================================
                 %BOUNDS
                 %==============================================================
 
                 %upper bound
-                ub(0*np+j) = hydro_max/e_max;         %PHi
-                ub((2*s+1)*np+j) = max(pw((d-1)*np+j,1:s));    %Pgrid
-                ub((2*s+2)*np+j) = Inf;         %Ti
-                ub((4*s+3)*np+j) = Inf;         %Pspi
-                ub((5*s+4)*np+j) = Inf;         %Ppi
-                %ub((5*s+4)*np+j) = Inf;     %Di
-                for incre=1:s                         
-                    ub((incre)*np+j) = pump_max/e_max;      %Pps                        
-                    ub((s+incre)*np+j) = e_max/e_max;       %Es 
-                    ub((2*s+2+incre)*np+j) = Inf;     %Ts
-                    ub((3*s+2+incre)*np+j) = Inf;     %ds
-                    ub((4*s+3+incre)*np+j) = 0;     %Psps
-                    %ub((5*s+5+incre)*np+j) = Inf;     %Ds
-                    
+                ub(0*np+j) = Inf;                                   %BID
+                for incre=1:s 
+                    ub((incre)*np+j) = hydro_max/e_max;             %Hydro
+                    ub((2*s+incre)*np+j) = pump_max/e_max;          %Pump
+                    ub((s+incre)*np+j) = max(pw((d-1)*np+j,1:s));   %Pgrid
+                    ub((3*s+incre)*np+j) = e_max/e_max;             %E_storage
+                    ub((4*s+incre)*np+j) = Inf;                     %d_imbalance
+                    ub((5*s+incre)*np+j) = Inf;                     %T_costs
+                    ub((6*s+incre)*np+j) = Inf;                     %P_waste
                 end
                 clear incre
                 
                 %lower bound
                 for incre=1:s
-                    lb((3*s+2+incre)*np+j) = -Inf;    %ds
+                    lb((4*s+incre)*np+j) =-Inf;                     %d_imbalance
                 end
                 clear incre
             end
@@ -286,7 +232,7 @@ for d = sd:nd   %simulates for the time horizon defined - nd: n. of days
         % Optimization Funcion
  
         x0= sparse(n_var,1);
-        options = optimset('Algorithm','interior-point','Display','iter-detailed','GradObj','on','DerivativeCheck','off','FunValCheck','on','UseParallel','always',...
+        options = optimset('Algorithm','interior-point','Display','iter-detailed','GradObj','on','DerivativeCheck','on','FunValCheck','on','UseParallel','always',...
     'Hessian','on','HessFcn',@(x,lambda)hessianfcn_simple_utility(x,lambda,s,a,k_profit,np,L_min, L_max,n_var,d,p_modiefied,hydro_cost,pump_cost),'OutputFcn',@outfun);%notify iter
             
         options.MaxFunEvals = (s*50000000); 
@@ -389,7 +335,7 @@ for d = sd:nd   %simulates for the time horizon defined - nd: n. of days
         
         %% OPERATIONAL STRATEGY
         day_ahead_data=horzcat(dados(:,1),dados(:,2*s+2));
-        [dados_opt,profit_opt,taxas_opt]=operational_strat( np,d, day_ahead_data, e_max, e_begin, hydro_eff, pump_eff, t, real_wind, forecast_wind,point_wind, hydro_max, pump_max, to_round,p,p_plus,p_minus);
+        [dados_opt,profit_opt,taxas_opt]=operational_strat( np,d, day_ahead_data, e_max, e_storage_initial, hydro_eff, pump_eff, t, real_wind, forecast_wind,point_wind, hydro_max, pump_max, to_round,p,p_plus,p_minus);
         %######
         dados_opt=horzcat(wind_date((d-1)*np+1:(d-1)*np+24,1:2),dados_opt);
         data_opt=vertcat(data_opt,dados_opt);

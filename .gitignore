@@ -39,3 +39,5 @@ Icon
 *.log
 *.out
 *.gz
+Software/backup
+*.asv
