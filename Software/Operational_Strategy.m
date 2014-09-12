@@ -54,7 +54,7 @@ final_data=zeros(np,7);
             %eq. 0: Real - Forecasted
             Aeq(0*np+j,0*np+j) = 1;
             Aeq(0*np+j,3*np+j) = 1;
-            Aeq(0*np+j,5*np+j) = 1;
+            Aeq(0*np+j,5*np+j) = -1;
             %Aeq(0*np+j,6*np+j) = -1;
             beq(0*np+j) = day_ahead(j,1);
 
@@ -169,8 +169,8 @@ final_data=zeros(np,7);
         
     end
     
-    final_data(:,6)=final_data(:,6)-final_data(:,7);
-    final_data(:,6)=-final_data(:,6);
+    final_data(:,6)=final_data(:,6)+final_data(:,7); %accounts for positive imbalances
+%     final_data(:,6)=-final_data(:,6);
     arredondar=1;
     if arredondar == 1    
         [r,c] = size (final_data);
@@ -193,6 +193,7 @@ final_data=zeros(np,7);
     taxas=0;
     taxas_2=zeros(np,1);
     
+    %adds the positive imbalance to the power injected into the grid
     for j=1:24
         if final_data(j,6) > 0 
             final_data(j,4)=final_data(j,4)+final_data(j,6);
@@ -216,7 +217,7 @@ final_data=zeros(np,7);
     final_storage=final_data(24,3)+final_data(24,2)*system_data.pump_eff-final_data(24,1)/system_data.hydro_eff;
     
     final_data(:,5)=final_data(:,6);
-    final_data(:,7)=0;
+    final_data(:,7)=[];
     final_data(:,6)=taxas_2;
 end
 

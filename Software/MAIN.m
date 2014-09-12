@@ -29,10 +29,10 @@ tStart_total=tic;
 %% INITIALIZATION
 
 main_data.sd = 1;               % starting day
-main_data.nd = 1;%23;          % n. days [1;92]
+main_data.nd = 10;%23;          % n. days [1;92]
 main_data.np = 24;              % n. periods [1;24]
 main_data.t = 1;                % n. hours 1
-main_data.s = 10;               % n. scenarios 
+main_data.s = 50;               % n. scenarios 
 main_data.prob = 1/main_data.s; % probability of each scenario
 main_data.a = 3;                % decison maker risk factor prone:a<0; averse:a>0
 main_data.DM_A=0.66029;  %Decision Maker A

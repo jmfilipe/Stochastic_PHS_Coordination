@@ -40,4 +40,5 @@ Icon
 *.out
 *.gz
 Software/backup
+Software/Results
 *.asv
